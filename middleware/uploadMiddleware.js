@@ -1,42 +1,28 @@
-import multer from "multer";
-import path from "path";
+import { v2 as cloudinary } from 'cloudinary'
+import { CloudinaryStorage } from 'multer-storage-cloudinary'
+import multer from 'multer'
+import dotenv from 'dotenv'
 
-// Set storage
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "uploads/");
-  },
+dotenv.config()
 
-  filename: function (req, file, cb) {
-    const ext = path.extname(file.originalname);
-    const name = path.basename(file.originalname, ext).replace(/\s+/g, "-");
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+})
 
-    cb(null, `${name}-${Date.now()}${ext}`);
-  },
-});
-
-// File filter (only images)
-const fileFilter = (req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png|webp/;
-
-  const isValid =
-    allowedTypes.test(file.mimetype) &&
-    allowedTypes.test(path.extname(file.originalname).toLowerCase());
-
-  if (isValid) {
-    cb(null, true);
-  } else {
-    cb(new Error("Only image files are allowed"), false);
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: 'swiftkart',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+    transformation: [{ width: 800, crop: 'limit' }]
   }
-};
+})
 
-// Upload config
 const upload = multer({
   storage,
-  fileFilter,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
-  },
-});
+  limits: { fileSize: 5 * 1024 * 1024 }
+})
 
-export default upload;
+export default upload
