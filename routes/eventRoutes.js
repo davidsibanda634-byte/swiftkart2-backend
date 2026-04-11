@@ -1,14 +1,15 @@
-import express from "express";
+import express from "express"
 import {
   createEvent,
   getEvents,
-} from "../controllers/eventController.js";
+  deleteEvent
+} from "../controllers/eventController.js"
+import { protect } from "../middleware/authMiddleware.js"
 
-import { protect } from "../middleware/authMiddleware.js";
+const router = express.Router()
 
-const router = express.Router();
+router.get("/", getEvents)
+router.post("/", protect, createEvent)
+router.delete("/:id", protect, deleteEvent)
 
-router.get("/", getEvents);
-router.post("/", protect, createEvent);
-
-export default router;
+export default router
