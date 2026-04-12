@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose from "mongoose"
 
 const listingSchema = new mongoose.Schema(
   {
@@ -7,22 +7,32 @@ const listingSchema = new mongoose.Schema(
     price: { type: Number, required: true },
     images: [{ type: String }],
     phone: { type: String, required: true },
-
+    category: {
+      type: String,
+      enum: [
+        'Fashion',
+        'Cosmetics & Hair',
+        'Mobile & Accessories',
+        'Vehicles',
+        'Furniture',
+        'Electronics',
+        'Food',
+        'Other'
+      ],
+      default: 'Other'
+    },
     location: {
       country: { type: String, required: true },
       city: { type: String, required: true },
       area: { type: String },
     },
-
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
   },
   { timestamps: true }
-);
+)
 
-// IMPORTANT: default export
-const Listing = mongoose.model("Listing", listingSchema);
-
-export default Listing;
+const Listing = mongoose.model("Listing", listingSchema)
+export default Listing
