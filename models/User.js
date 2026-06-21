@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose from "mongoose"
 
 const userSchema = new mongoose.Schema(
   {
@@ -23,8 +23,18 @@ const userSchema = new mongoose.Schema(
       city: { type: String },
       area: { type: String },
     },
+
+    isAdmin: {
+      type: Boolean,
+      default: false,
+    },
+
+    isBanned: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
-);
+)
 
-export default mongoose.model("User", userSchema);
+export default mongoose.model("User", userSchema)
