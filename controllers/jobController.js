@@ -10,7 +10,11 @@ export const createJob = asyncHandler(async (req, res) => {
 })
 
 export const getJobs = asyncHandler(async (req, res) => {
-  const jobs = await Job.find()
+  const { category } = req.query
+  let filter = {}
+  if (category && category !== "All") filter.category = category
+
+  const jobs = await Job.find(filter)
     .sort({ createdAt: -1 })
     .populate("user", "name phone")
   res.json(jobs)

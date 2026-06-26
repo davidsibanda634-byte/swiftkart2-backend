@@ -1,8 +1,14 @@
-import mongoose from "mongoose";
+import mongoose from "mongoose"
 
 const jobSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
+
+    category: {
+      type: String,
+      enum: ["Internship", "Part-Time", "Full-Time", "Freelance", "Volunteer", "Other"],
+      default: "Other",
+    },
 
     company: String,
 
@@ -22,6 +28,6 @@ const jobSchema = new mongoose.Schema(
     },
   },
   { timestamps: true }
-);
+)
 
-export default mongoose.model("Job", jobSchema);
+export default mongoose.model("Job", jobSchema)
