@@ -12,6 +12,7 @@ import eventRoutes from "./routes/eventRoutes.js"
 import searchRoutes from "./routes/searchRoutes.js"
 import reportRoutes from "./routes/reportRoutes.js"
 import adminRoutes from "./routes/adminRoutes.js"
+import accommodationRoutes from "./routes/accommodationRoutes.js"
 
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js"
 
@@ -33,6 +34,7 @@ app.use("/api/events", eventRoutes)
 app.use("/api/search", searchRoutes)
 app.use("/api/reports", reportRoutes)
 app.use("/api/admin", adminRoutes)
+app.use("/api/accommodations", accommodationRoutes)
 
 app.get("/", (req, res) => {
   res.send("SwiftKart API Running...")
