@@ -3,24 +3,80 @@ import bcrypt from "bcryptjs"
 import generateToken from "../utils/generateToken.js"
 import asyncHandler from "../middleware/asyncHandler.js"
 
+// ── Input sanitizer — strips HTML/script tags ──
+const sanitize = (str) => {
+  if (typeof str !== 'string') return str
+  return str.replace(/<[^>]*>/g, '').trim()
+}
+
 // REGISTER
 export const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password, phone, location } = req.body
 
-  const exists = await User.findOne({ email })
+  // ── Validate required fields ──
+  if (!name || !email || !password || !phone) {
+    res.status(400)
+    throw new Error("Name, email, password and phone are all required")
+  }
+
+  // ── Sanitize inputs ──
+  const cleanName = sanitize(name)
+  const cleanEmail = sanitize(email).toLowerCase()
+  const cleanPhone = sanitize(phone)
+
+  // ── Name validation ──
+  if (cleanName.length < 2 || cleanName.length > 60) {
+    res.status(400)
+    throw new Error("Name must be between 2 and 60 characters")
+  }
+
+  // ── Email format validation ──
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(cleanEmail)) {
+    res.status(400)
+    throw new Error("Please enter a valid email address")
+  }
+
+  // ── Password strength ──
+  if (password.length < 6) {
+    res.status(400)
+    throw new Error("Password must be at least 6 characters")
+  }
+
+  if (password.length > 128) {
+    res.status(400)
+    throw new Error("Password is too long")
+  }
+
+  // ── Phone validation — must have digits, optional + prefix ──
+  const phoneDigits = cleanPhone.replace(/\D/g, '')
+  if (phoneDigits.length < 9 || phoneDigits.length > 15) {
+    res.status(400)
+    throw new Error("Please enter a valid phone number including country code")
+  }
+
+  // ── Check duplicate ──
+  const exists = await User.findOne({ email: cleanEmail })
   if (exists) {
     res.status(400)
-    throw new Error("User already exists")
+    throw new Error("An account with this email already exists")
   }
+
+  // ── Sanitize location ──
+  const cleanLocation = location ? {
+    country: sanitize(location.country || ''),
+    city: sanitize(location.city || ''),
+    area: sanitize(location.area || ''),
+  } : {}
 
   const hashedPassword = await bcrypt.hash(password, 10)
 
   const user = await User.create({
-    name,
-    email,
+    name: cleanName,
+    email: cleanEmail,
     password: hashedPassword,
-    phone,
-    location,
+    phone: cleanPhone,
+    location: cleanLocation,
   })
 
   res.status(201).json({
@@ -28,6 +84,7 @@ export const registerUser = asyncHandler(async (req, res) => {
     name: user.name,
     email: user.email,
     phone: user.phone,
+    location: user.location,
     isAdmin: user.isAdmin,
     isBanned: user.isBanned,
     token: generateToken(user._id),
@@ -38,12 +95,33 @@ export const registerUser = asyncHandler(async (req, res) => {
 export const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body
 
-  const user = await User.findOne({ email })
+  // ── Validate required fields ──
+  if (!email || !password) {
+    res.status(400)
+    throw new Error("Email and password are required")
+  }
+
+  const cleanEmail = sanitize(email).toLowerCase()
+
+  // ── Basic email format check ──
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(cleanEmail)) {
+    res.status(400)
+    throw new Error("Please enter a valid email address")
+  }
+
+  // ── Password length sanity check — prevent huge string attacks ──
+  if (password.length > 128) {
+    res.status(400)
+    throw new Error("Invalid credentials")
+  }
+
+  const user = await User.findOne({ email: cleanEmail })
 
   if (user && (await bcrypt.compare(password, user.password))) {
     if (user.isBanned) {
       res.status(403)
-      throw new Error("Your account has been suspended")
+      throw new Error("Your account has been suspended. Contact support at support@scalablenexus.co.zw")
     }
 
     res.json({
@@ -51,12 +129,13 @@ export const loginUser = asyncHandler(async (req, res) => {
       name: user.name,
       email: user.email,
       phone: user.phone,
+      location: user.location,
       isAdmin: user.isAdmin,
       isBanned: user.isBanned,
       token: generateToken(user._id),
     })
   } else {
     res.status(401)
-    throw new Error("Invalid credentials")
+    throw new Error("Invalid email or password")
   }
 })

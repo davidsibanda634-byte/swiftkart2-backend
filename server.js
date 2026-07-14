@@ -1,6 +1,7 @@
 import express from "express"
 import dotenv from "dotenv"
 import cors from "cors"
+import rateLimit from "express-rate-limit"
 
 import connectDB from "./config/db.js"
 
@@ -21,11 +22,44 @@ connectDB()
 
 const app = express()
 
-app.use(cors())
-app.use(express.json())
+// ── CORS — only allow your frontend domains ──
+app.use(cors({
+  origin: [
+    'https://swiftkart-frontend-l6wi.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:3000',
+  ],
+  credentials: true,
+}))
+
+app.use(express.json({ limit: '10mb' }))
+app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
 app.use("/uploads", express.static("uploads"))
 
+// ── Rate limiter for auth routes — prevent brute force ──
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { message: "Too many attempts from this device. Please try again in 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+
+// ── General API limiter — prevent spam ──
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  message: { message: "Too many requests. Please slow down." },
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+
+// ── Apply rate limiters ──
+app.use("/api/auth", authLimiter)
+app.use("/api", apiLimiter)
+
+// ── Routes ──
 app.use("/api/auth", authRoutes)
 app.use("/api/listings", listingRoutes)
 app.use("/api/services", serviceRoutes)
