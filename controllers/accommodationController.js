@@ -1,6 +1,11 @@
 import Accommodation from "../models/Accommodation.js"
 import { v2 as cloudinary } from "cloudinary"
 
+const sanitize = (str) => {
+  if (typeof str !== 'string') return str
+  return str.replace(/<[^>]*>/g, '').trim()
+}
+
 // GET all
 export const getAccommodations = async (req, res) => {
   try {
@@ -38,6 +43,10 @@ export const createAccommodation = async (req, res) => {
       'location[address]': address,
     } = req.body
 
+    if (!title || !price || !phone) {
+      return res.status(400).json({ message: "Title, price and phone are required" })
+    }
+
     let images = []
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
@@ -49,16 +58,25 @@ export const createAccommodation = async (req, res) => {
     }
 
     const accommodation = await Accommodation.create({
-      title, description,
+      title: sanitize(title),
+      description: sanitize(description || ''),
       price: Number(price),
-      priceType, listingType, propertyType,
+      priceType,
+      listingType,
+      propertyType,
       bedrooms: Number(bedrooms) || 1,
       bathrooms: Number(bathrooms) || 1,
       furnished,
       amenities: amenities ? JSON.parse(amenities) : [],
-      images, phone,
+      images,
+      phone: sanitize(phone),
       availableFrom: availableFrom || null,
-      location: { country, city, area, address },
+      location: {
+        country: sanitize(country || ''),
+        city: sanitize(city || ''),
+        area: sanitize(area || ''),
+        address: sanitize(address || ''),
+      },
       user: req.user._id,
     })
 
@@ -74,10 +92,13 @@ export const updateAccommodation = async (req, res) => {
   try {
     const accommodation = await Accommodation.findById(req.params.id)
     if (!accommodation) return res.status(404).json({ message: "Not found" })
+
+    // Allow owner OR admin
     const ownerId = accommodation.user?.toString()
     if (ownerId !== req.user._id.toString() && !req.user.isAdmin) {
       return res.status(403).json({ message: "Not authorized" })
     }
+
     Object.assign(accommodation, req.body)
     await accommodation.save()
     res.json(accommodation)
@@ -91,10 +112,13 @@ export const deleteAccommodation = async (req, res) => {
   try {
     const accommodation = await Accommodation.findById(req.params.id)
     if (!accommodation) return res.status(404).json({ message: "Not found" })
+
+    // Allow owner OR admin
     const ownerId = accommodation.user?.toString()
     if (ownerId !== req.user._id.toString() && !req.user.isAdmin) {
       return res.status(403).json({ message: "Not authorized" })
     }
+
     await accommodation.deleteOne()
     res.json({ message: "Deleted" })
   } catch (err) {

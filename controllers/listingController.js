@@ -1,11 +1,28 @@
 import Listing from "../models/Listing.js"
 import asyncHandler from "../middleware/asyncHandler.js"
 
+const sanitize = (str) => {
+  if (typeof str !== 'string') return str
+  return str.replace(/<[^>]*>/g, '').trim()
+}
+
 // CREATE
 export const createListing = asyncHandler(async (req, res) => {
   const imagePaths = req.files?.map(file => file.path) || []
+
+  const { title, description, price, category, phone } = req.body
+
+  if (!title || !price || !phone) {
+    res.status(400)
+    throw new Error("Title, price and phone are required")
+  }
+
   const listing = await Listing.create({
     ...req.body,
+    title: sanitize(title),
+    description: sanitize(description || ''),
+    category: sanitize(category || 'Other'),
+    phone: sanitize(phone),
     images: imagePaths,
     user: req.user._id,
   })
@@ -42,8 +59,9 @@ export const updateListing = asyncHandler(async (req, res) => {
     res.status(404)
     throw new Error("Listing not found")
   }
-  if (listing.user.toString() !== req.user._id.toString()) {
-    res.status(401)
+  // Allow owner OR admin
+  if (listing.user.toString() !== req.user._id.toString() && !req.user.isAdmin) {
+    res.status(403)
     throw new Error("Not authorized")
   }
   const updated = await Listing.findByIdAndUpdate(
@@ -59,8 +77,9 @@ export const deleteListing = asyncHandler(async (req, res) => {
     res.status(404)
     throw new Error("Listing not found")
   }
-  if (listing.user.toString() !== req.user._id.toString()) {
-    res.status(401)
+  // Allow owner OR admin
+  if (listing.user.toString() !== req.user._id.toString() && !req.user.isAdmin) {
+    res.status(403)
     throw new Error("Not authorized")
   }
   await listing.deleteOne()
