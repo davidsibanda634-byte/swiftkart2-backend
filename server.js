@@ -25,6 +25,7 @@ const app = express()
 // ── CORS — only allow your frontend domains ──
 app.use(cors({
   origin: [
+    'https://scalablenexus.vercel.app',
     'https://swiftkart-frontend-l6wi.vercel.app',
     'http://localhost:5173',
     'http://localhost:3000',
