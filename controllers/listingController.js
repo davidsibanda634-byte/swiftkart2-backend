@@ -1,15 +1,31 @@
 import Listing from "../models/Listing.js"
 import asyncHandler from "../middleware/asyncHandler.js"
+import { v2 as cloudinary } from "cloudinary"
 
 const sanitize = (str) => {
   if (typeof str !== 'string') return str
   return str.replace(/<[^>]*>/g, '').trim()
 }
 
+const deleteFromCloudinary = async (images) => {
+  if (!images || images.length === 0) return
+  for (const imageUrl of images) {
+    try {
+      if (!imageUrl || !imageUrl.startsWith('http')) continue
+      const parts = imageUrl.split('/')
+      const filename = parts[parts.length - 1].split('.')[0]
+      const folder = parts[parts.length - 2]
+      const publicId = folder + '/' + filename
+      await cloudinary.uploader.destroy(publicId)
+    } catch (err) {
+      console.error('Cloudinary delete error:', err.message)
+    }
+  }
+}
+
 // CREATE
 export const createListing = asyncHandler(async (req, res) => {
   const imagePaths = req.files?.map(file => file.path) || []
-
   const { title, description, price, category, phone } = req.body
 
   if (!title || !price || !phone) {
@@ -59,7 +75,6 @@ export const updateListing = asyncHandler(async (req, res) => {
     res.status(404)
     throw new Error("Listing not found")
   }
-  // Allow owner OR admin
   if (listing.user.toString() !== req.user._id.toString() && !req.user.isAdmin) {
     res.status(403)
     throw new Error("Not authorized")
@@ -70,18 +85,18 @@ export const updateListing = asyncHandler(async (req, res) => {
   res.json(updated)
 })
 
-// DELETE
+// DELETE — also removes images from Cloudinary
 export const deleteListing = asyncHandler(async (req, res) => {
   const listing = await Listing.findById(req.params.id)
   if (!listing) {
     res.status(404)
     throw new Error("Listing not found")
   }
-  // Allow owner OR admin
   if (listing.user.toString() !== req.user._id.toString() && !req.user.isAdmin) {
     res.status(403)
     throw new Error("Not authorized")
   }
+  await deleteFromCloudinary(listing.images)
   await listing.deleteOne()
   res.json({ message: "Listing removed" })
 })

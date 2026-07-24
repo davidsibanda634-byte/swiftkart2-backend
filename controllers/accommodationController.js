@@ -6,6 +6,22 @@ const sanitize = (str) => {
   return str.replace(/<[^>]*>/g, '').trim()
 }
 
+const deleteFromCloudinary = async (images) => {
+  if (!images || images.length === 0) return
+  for (const imageUrl of images) {
+    try {
+      if (!imageUrl || !imageUrl.startsWith('http')) continue
+      const parts = imageUrl.split('/')
+      const filename = parts[parts.length - 1].split('.')[0]
+      const folder = parts[parts.length - 2]
+      const publicId = folder + '/' + filename
+      await cloudinary.uploader.destroy(publicId)
+    } catch (err) {
+      console.error('Cloudinary delete error:', err.message)
+    }
+  }
+}
+
 // GET all
 export const getAccommodations = async (req, res) => {
   try {
@@ -93,7 +109,6 @@ export const updateAccommodation = async (req, res) => {
     const accommodation = await Accommodation.findById(req.params.id)
     if (!accommodation) return res.status(404).json({ message: "Not found" })
 
-    // Allow owner OR admin
     const ownerId = accommodation.user?.toString()
     if (ownerId !== req.user._id.toString() && !req.user.isAdmin) {
       return res.status(403).json({ message: "Not authorized" })
@@ -107,18 +122,18 @@ export const updateAccommodation = async (req, res) => {
   }
 }
 
-// DELETE
+// DELETE — also removes images from Cloudinary
 export const deleteAccommodation = async (req, res) => {
   try {
     const accommodation = await Accommodation.findById(req.params.id)
     if (!accommodation) return res.status(404).json({ message: "Not found" })
 
-    // Allow owner OR admin
     const ownerId = accommodation.user?.toString()
     if (ownerId !== req.user._id.toString() && !req.user.isAdmin) {
       return res.status(403).json({ message: "Not authorized" })
     }
 
+    await deleteFromCloudinary(accommodation.images)
     await accommodation.deleteOne()
     res.json({ message: "Deleted" })
   } catch (err) {
