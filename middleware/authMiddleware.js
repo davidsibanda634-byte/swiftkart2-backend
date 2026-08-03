@@ -24,6 +24,9 @@ export const protect = async (req, res, next) => {
       return res.status(403).json({ message: "Your account has been suspended. Contact support." })
     }
 
+    // Fire-and-forget — don't await, so this never slows down the actual request
+    User.findByIdAndUpdate(req.user._id, { lastActiveAt: Date.now() }).catch(() => {})
+
     next()
   } catch (error) {
     return res.status(401).json({ message: "Token invalid, not authorized" })
