@@ -1,19 +1,22 @@
-import express from "express"
-import dotenv from "dotenv"
-import cors from "cors"
-import rateLimit from "express-rate-limit"
+import express     from "express"
+import dotenv      from "dotenv"
+import cors        from "cors"
+import rateLimit   from "express-rate-limit"
 
-import connectDB from "./config/db.js"
+import connectDB   from "./config/db.js"
 
-import authRoutes from "./routes/authRoutes.js"
-import listingRoutes from "./routes/listingRoutes.js"
-import serviceRoutes from "./routes/serviceRoutes.js"
-import jobRoutes from "./routes/jobRoutes.js"
-import eventRoutes from "./routes/eventRoutes.js"
-import searchRoutes from "./routes/searchRoutes.js"
-import reportRoutes from "./routes/reportRoutes.js"
-import adminRoutes from "./routes/adminRoutes.js"
+import authRoutes          from "./routes/authRoutes.js"
+import listingRoutes       from "./routes/listingRoutes.js"
+import serviceRoutes       from "./routes/serviceRoutes.js"
+import jobRoutes           from "./routes/jobRoutes.js"
+import eventRoutes         from "./routes/eventRoutes.js"
+import searchRoutes        from "./routes/searchRoutes.js"
+import reportRoutes        from "./routes/reportRoutes.js"
+import adminRoutes         from "./routes/adminRoutes.js"
 import accommodationRoutes from "./routes/accommodationRoutes.js"
+
+import ticketTypeRoutes    from "./routes/ticketTypeRoutes.js"
+import ticketRoutes        from "./routes/ticketRoutes.js"
 
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js"
 
@@ -38,38 +41,44 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
 app.use("/uploads", express.static("uploads"))
 
-// ── Rate limiter for auth routes — prevent brute force ──
+// ── Rate limiter for auth routes ──
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  message: { message: "Too many attempts from this device. Please try again in 15 minutes." },
+  windowMs:       15 * 60 * 1000,
+  max:            20,
+  message:        { message: "Too many attempts from this device. Please try again in 15 minutes." },
   standardHeaders: true,
-  legacyHeaders: false,
+  legacyHeaders:   false,
 })
 
-// ── General API limiter — prevent spam ──
+// ── General API limiter ──
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 300,
-  message: { message: "Too many requests. Please slow down." },
+  windowMs:       15 * 60 * 1000,
+  max:            300,
+  message:        { message: "Too many requests. Please slow down." },
   standardHeaders: true,
-  legacyHeaders: false,
+  legacyHeaders:   false,
 })
 
 // ── Apply rate limiters ──
 app.use("/api/auth", authLimiter)
-app.use("/api", apiLimiter)
+app.use("/api",      apiLimiter)
 
 // ── Routes ──
-app.use("/api/auth", authRoutes)
-app.use("/api/listings", listingRoutes)
-app.use("/api/services", serviceRoutes)
-app.use("/api/jobs", jobRoutes)
-app.use("/api/events", eventRoutes)
-app.use("/api/search", searchRoutes)
-app.use("/api/reports", reportRoutes)
-app.use("/api/admin", adminRoutes)
+app.use("/api/auth",           authRoutes)
+app.use("/api/listings",       listingRoutes)
+app.use("/api/services",       serviceRoutes)
+app.use("/api/jobs",           jobRoutes)
+app.use("/api/events",         eventRoutes)
+app.use("/api/search",         searchRoutes)
+app.use("/api/reports",        reportRoutes)
+app.use("/api/admin",          adminRoutes)
 app.use("/api/accommodations", accommodationRoutes)
+
+app.use("/api/ticket-types",   ticketTypeRoutes)
+
+
+app.use("/api/tickets",        ticketRoutes)
+
 
 app.get("/", (req, res) => {
   res.send("SwiftKart API Running...")
