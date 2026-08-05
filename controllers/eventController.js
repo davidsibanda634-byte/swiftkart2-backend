@@ -1,4 +1,4 @@
-import Event from "../models/Event.js"
+import Event       from "../models/Event.js"
 import asyncHandler from "../middleware/asyncHandler.js"
 import { v2 as cloudinary } from "cloudinary"
 
@@ -12,9 +12,9 @@ const deleteFromCloudinary = async (images) => {
   for (const imageUrl of images) {
     try {
       if (!imageUrl || !imageUrl.startsWith('http')) continue
-      const parts = imageUrl.split('/')
+      const parts    = imageUrl.split('/')
       const filename = parts[parts.length - 1].split('.')[0]
-      const folder = parts[parts.length - 2]
+      const folder   = parts[parts.length - 2]
       const publicId = folder + '/' + filename
       await cloudinary.uploader.destroy(publicId)
     } catch (err) {
@@ -23,26 +23,7 @@ const deleteFromCloudinary = async (images) => {
   }
 }
 
-export const createEvent = asyncHandler(async (req, res) => {
-  const imagePaths = req.files?.map(file => file.path) || []
-  const { title, phone } = req.body
-
-  if (!title || !phone) {
-    res.status(400)
-    throw new Error("Title and phone are required")
-  }
-
-  const event = await Event.create({
-    ...req.body,
-    title: sanitize(title),
-    description: sanitize(req.body.description || ''),
-    phone: sanitize(phone),
-    images: imagePaths,
-    user: req.user._id,
-  })
-  res.status(201).json(event)
-})
-
+// GET all events
 export const getEvents = asyncHandler(async (req, res) => {
   const events = await Event.find()
     .sort({ createdAt: -1 })
@@ -50,7 +31,66 @@ export const getEvents = asyncHandler(async (req, res) => {
   res.json(events)
 })
 
-// UPDATE
+// GET single event by id
+
+export const getEventById = asyncHandler(async (req, res) => {
+
+
+  const event = await Event.findById(req.params.id).populate("user", "name phone")
+
+
+  if (!event) {
+
+
+    res.status(404)
+
+
+    throw new Error("Event not found")
+
+
+  }
+
+
+  res.json(event)
+
+
+})
+
+
+// CREATE event
+export const createEvent = asyncHandler(async (req, res) => {
+  const imagePaths = req.files?.map(file => file.path) || []
+  const { title, phone, description, date, ticketsEnabled, capacity } = req.body
+
+  if (!title || !phone) {
+    res.status(400)
+    throw new Error("Title and phone are required")
+  }
+
+  const event = await Event.create({
+    title:          sanitize(title),
+    description:   sanitize(description || ''),
+    phone:          sanitize(phone),
+    date:           req.body.date,
+    location:       {
+      country: sanitize(req.body['location[country]'] || req.body.location?.country || ''),
+      city:    sanitize(req.body['location[city]']    || req.body.location?.city    || ''),
+      area:    sanitize(req.body['location[area]']    || req.body.location?.area    || ''),
+    },
+
+    ticketsEnabled: ticketsEnabled === 'true' || ticketsEnabled === true,
+
+
+    capacity:       parseInt(capacity) || 0,
+
+    images:         imagePaths,
+    user:           req.user._id,
+  })
+
+  res.status(201).json(event)
+})
+
+// UPDATE event
 export const updateEvent = asyncHandler(async (req, res) => {
   const event = await Event.findById(req.params.id)
   if (!event) {
@@ -61,9 +101,41 @@ export const updateEvent = asyncHandler(async (req, res) => {
     res.status(403)
     throw new Error("Not authorized")
   }
-  const updated = await Event.findByIdAndUpdate(
-    req.params.id, req.body, { new: true }
-  )
+
+
+  // Build update object explicitly so ticketsEnabled is handled correctly
+
+
+  const updates = {
+
+
+    title:          sanitize(req.body.title       || event.title),
+
+
+    description:    sanitize(req.body.description  || ''),
+
+
+    phone:          sanitize(req.body.phone        || event.phone),
+
+
+    date:           req.body.date           || event.date,
+
+
+    location:       req.body.location       || event.location,
+
+
+    ticketsEnabled: req.body.ticketsEnabled === 'true' || req.body.ticketsEnabled === true,
+
+
+    capacity:       parseInt(req.body.capacity) || 0,
+
+
+  }
+
+
+
+  const updated = await Event.findByIdAndUpdate(req.params.id, updates, { new: true })
+
   res.json(updated)
 })
 
