@@ -46,7 +46,7 @@ export const createService = asyncHandler(async (req, res) => {
 export const getServices = asyncHandler(async (req, res) => {
   const services = await Service.find()
     .sort({ createdAt: -1 })
-    .populate("user", "name phone")
+    .populate("user", "name phone isVerified")
   res.json(services)
 })
 

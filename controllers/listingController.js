@@ -54,7 +54,7 @@ export const getListings = asyncHandler(async (req, res) => {
   if (category && category !== 'All') filter.category = category
   const listings = await Listing.find(filter)
     .sort({ createdAt: -1 })
-    .populate("user", "name phone")
+    .populate("user", "name phone isVerified")
   res.json(listings)
 })
 

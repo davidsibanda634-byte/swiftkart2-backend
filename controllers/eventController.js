@@ -27,7 +27,7 @@ const deleteFromCloudinary = async (images) => {
 export const getEvents = asyncHandler(async (req, res) => {
   const events = await Event.find()
     .sort({ createdAt: -1 })
-    .populate("user", "name phone")
+    .populate("user", "name phone isVerified")
   res.json(events)
 })
 
@@ -36,7 +36,7 @@ export const getEvents = asyncHandler(async (req, res) => {
 export const getEventById = asyncHandler(async (req, res) => {
 
 
-  const event = await Event.findById(req.params.id).populate("user", "name phone")
+  const event = await Event.findById(req.params.id).populate("user", "name phone isVerified")
 
 
   if (!event) {
