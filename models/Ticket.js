@@ -35,7 +35,6 @@ const ticketSchema = new mongoose.Schema(
     ticketNumber: {
       type:   String,
       unique: true,
-      // generated e.g. "SN-2026-A7X9K"
     },
 
     qrData: {
@@ -47,8 +46,7 @@ const ticketSchema = new mongoose.Schema(
       type:   String,
       unique: true,
       sparse: true,
-      // the string encoded inside the QR — used for validation
-      // scanner reads this, sends to backend, backend looks it up
+      // encoded inside QR — used for door validation
     },
 
     // ── Status ────────────────────────────────────────
@@ -56,24 +54,33 @@ const ticketSchema = new mongoose.Schema(
       type:    String,
       enum:    ["pending", "confirmed", "cancelled", "used"],
       default: "confirmed",
-      // free tickets auto-confirmed, paid tickets start as pending
+      // free = confirmed instantly, paid = pending until organizer confirms
     },
 
     scannedAt: {
       type: Date,
-      // set when QR is scanned at the door
     },
 
     scannedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref:  "User",
-      // organizer or staff member who scanned
     },
 
+    // ── Payment ───────────────────────────────────────
     paymentMethod: {
       type:    String,
-      enum:    ["free", "whatsapp", "cash_at_door"],
+      enum:    ["free", "ecocash", "upi", "whatsapp", "cash_at_door"],
+
       default: "free",
+    },
+    paymentReference: {
+      type: String,
+      // EcoCash transaction ref e.g. "FT26123ABC456"
+      // UPI UTR number e.g. "427612345678"
+    },
+    paymentProofNote: {
+      type: String,
+      // optional note from buyer e.g. "Paid at 2pm, name Tafadzwa"
     },
   },
   { timestamps: true }
