@@ -1,11 +1,14 @@
-import Event       from "../models/Event.js"
+import Event        from "../models/Event.js"
 import asyncHandler from "../middleware/asyncHandler.js"
 import { v2 as cloudinary } from "cloudinary"
 
+// Strip HTML tags from user input
 const sanitize = (str) => {
   if (typeof str !== 'string') return str
   return str.replace(/<[^>]*>/g, '').trim()
 }
+
+// Remove images from Cloudinary when an event is deleted
 const deleteFromCloudinary = async (images) => {
   if (!images || images.length === 0) return
   for (const imageUrl of images) {
@@ -22,16 +25,18 @@ const deleteFromCloudinary = async (images) => {
   }
 }
 
-// GET all events
+// ── GET all events ────────────────────────────────────
 export const getEvents = asyncHandler(async (req, res) => {
   const events = await Event.find()
     .sort({ createdAt: -1 })
     .populate("user", "name phone isVerified")
   res.json(events)
 })
-// GET single event by id
+
+// ── GET single event by id ────────────────────────────
 export const getEventById = asyncHandler(async (req, res) => {
-  const event = await Event.findById(req.params.id).populate("user", "name phone isVerified")
+  const event = await Event.findById(req.params.id)
+    .populate("user", "name phone isVerified")
   if (!event) {
     res.status(404)
     throw new Error("Event not found")
@@ -39,10 +44,16 @@ export const getEventById = asyncHandler(async (req, res) => {
   res.json(event)
 })
 
-// CREATE event
+// ── CREATE event ──────────────────────────────────────
 export const createEvent = asyncHandler(async (req, res) => {
   const imagePaths = req.files?.map(file => file.path) || []
-  const { title, phone, description, date, ticketsEnabled, capacity } = req.body
+  const {
+    title, phone, description, date,
+    ticketsEnabled, capacity,
+
+    ecocashNumber, ecocashName,
+    upiId, upiName, paymentInstructions,
+  } = req.body
 
   if (!title || !phone) {
     res.status(400)
@@ -51,28 +62,29 @@ export const createEvent = asyncHandler(async (req, res) => {
 
   const event = await Event.create({
     title:          sanitize(title),
-    description:   sanitize(description || ''),
+    description:    sanitize(description || ''),
     phone:          sanitize(phone),
-    date:           req.body.date,
-    location:       {
+    date:           date,
+    location: {
       country: sanitize(req.body['location[country]'] || req.body.location?.country || ''),
       city:    sanitize(req.body['location[city]']    || req.body.location?.city    || ''),
       area:    sanitize(req.body['location[area]']    || req.body.location?.area    || ''),
     },
     ticketsEnabled:      ticketsEnabled === 'true' || ticketsEnabled === true,
-     capacity:            parseInt(capacity) || 0,
-     images:              imagePaths,
-     user:                req.user._id,
-     ecocashNumber:       sanitize(req.body.ecocashNumber       || ''),
-     ecocashName:         sanitize(req.body.ecocashName         || ''),
-     upiId:               sanitize(req.body.upiId               || ''),
-     upiName:             sanitize(req.body.upiName             || ''),
-     paymentInstructions: sanitize(req.body.paymentInstructions || ''),
+    capacity:            parseInt(capacity) || 0,
+    images:              imagePaths,
+    user:                req.user._id,
+    ecocashNumber:       sanitize(ecocashNumber       || ''),
+    ecocashName:         sanitize(ecocashName         || ''),
+    upiId:               sanitize(upiId               || ''),
+    upiName:             sanitize(upiName             || ''),
+    paymentInstructions: sanitize(paymentInstructions || ''),
   })
+
   res.status(201).json(event)
 })
 
-// UPDATE event
+// ── UPDATE event ──────────────────────────────────────
 export const updateEvent = asyncHandler(async (req, res) => {
   const event = await Event.findById(req.params.id)
   if (!event) {
@@ -83,26 +95,27 @@ export const updateEvent = asyncHandler(async (req, res) => {
     res.status(403)
     throw new Error("Not authorized")
   }
-
-  // Build update object explicitly so ticketsEnabled is handled correctly
   const updates = {
-  title:               sanitize(req.body.title       || event.title),
-  description:         sanitize(req.body.description  || ''),
-  phone:               sanitize(req.body.phone        || event.phone),
-  date:                req.body.date           || event.date,
-  location:            req.body.location       || event.location,
-  ticketsEnabled:      req.body.ticketsEnabled === 'true' || req.body.ticketsEnabled === true,
-  capacity:            parseInt(req.body.capacity) || 0,
-  ecocashNumber:       sanitize(req.body.ecocashNumber       || ''),
-  ecocashName:         sanitize(req.body.ecocashName         || ''),
-  upiId:               sanitize(req.body.upiId               || ''),
-  upiName:             sanitize(req.body.upiName             || ''),
-  paymentInstructions: sanitize(req.body.paymentInstructions || ''),
-}
+    title:               sanitize(req.body.title       || event.title),
+    description:         sanitize(req.body.description  || ''),
+    phone:               sanitize(req.body.phone        || event.phone),
+    date:                req.body.date      || event.date,
+    location:            req.body.location  || event.location,
+    ticketsEnabled:      req.body.ticketsEnabled === 'true' || req.body.ticketsEnabled === true,
+    capacity:            parseInt(req.body.capacity) || 0,
+    ecocashNumber:       sanitize(req.body.ecocashNumber       || ''),
+    ecocashName:         sanitize(req.body.ecocashName         || ''),
+    upiId:               sanitize(req.body.upiId               || ''),
+    upiName:             sanitize(req.body.upiName             || ''),
+    paymentInstructions: sanitize(req.body.paymentInstructions || ''),
+
+  }
+
   const updated = await Event.findByIdAndUpdate(req.params.id, updates, { new: true })
   res.json(updated)
 })
-// DELETE — also removes images from Cloudinary
+
+// ── DELETE event ──────────────────────────────────────
 export const deleteEvent = asyncHandler(async (req, res) => {
   const event = await Event.findById(req.params.id)
   if (!event) {
