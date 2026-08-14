@@ -6,7 +6,6 @@ const sanitize = (str) => {
   if (typeof str !== 'string') return str
   return str.replace(/<[^>]*>/g, '').trim()
 }
-
 const deleteFromCloudinary = async (images) => {
   if (!images || images.length === 0) return
   for (const imageUrl of images) {
@@ -30,32 +29,15 @@ export const getEvents = asyncHandler(async (req, res) => {
     .populate("user", "name phone isVerified")
   res.json(events)
 })
-
 // GET single event by id
-
 export const getEventById = asyncHandler(async (req, res) => {
-
-
   const event = await Event.findById(req.params.id).populate("user", "name phone isVerified")
-
-
   if (!event) {
-
-
     res.status(404)
-
-
     throw new Error("Event not found")
-
-
   }
-
-
   res.json(event)
-
-
 })
-
 
 // CREATE event
 export const createEvent = asyncHandler(async (req, res) => {
@@ -77,16 +59,16 @@ export const createEvent = asyncHandler(async (req, res) => {
       city:    sanitize(req.body['location[city]']    || req.body.location?.city    || ''),
       area:    sanitize(req.body['location[area]']    || req.body.location?.area    || ''),
     },
-
-    ticketsEnabled: ticketsEnabled === 'true' || ticketsEnabled === true,
-
-
-    capacity:       parseInt(capacity) || 0,
-
-    images:         imagePaths,
-    user:           req.user._id,
+    ticketsEnabled:      ticketsEnabled === 'true' || ticketsEnabled === true,
+     capacity:            parseInt(capacity) || 0,
+     images:              imagePaths,
+     user:                req.user._id,
+     ecocashNumber:       sanitize(req.body.ecocashNumber       || ''),
+     ecocashName:         sanitize(req.body.ecocashName         || ''),
+     upiId:               sanitize(req.body.upiId               || ''),
+     upiName:             sanitize(req.body.upiName             || ''),
+     paymentInstructions: sanitize(req.body.paymentInstructions || ''),
   })
-
   res.status(201).json(event)
 })
 
@@ -102,43 +84,24 @@ export const updateEvent = asyncHandler(async (req, res) => {
     throw new Error("Not authorized")
   }
 
-
   // Build update object explicitly so ticketsEnabled is handled correctly
-
-
   const updates = {
-
-
-    title:          sanitize(req.body.title       || event.title),
-
-
-    description:    sanitize(req.body.description  || ''),
-
-
-    phone:          sanitize(req.body.phone        || event.phone),
-
-
-    date:           req.body.date           || event.date,
-
-
-    location:       req.body.location       || event.location,
-
-
-    ticketsEnabled: req.body.ticketsEnabled === 'true' || req.body.ticketsEnabled === true,
-
-
-    capacity:       parseInt(req.body.capacity) || 0,
-
-
-  }
-
-
-
+  title:               sanitize(req.body.title       || event.title),
+  description:         sanitize(req.body.description  || ''),
+  phone:               sanitize(req.body.phone        || event.phone),
+  date:                req.body.date           || event.date,
+  location:            req.body.location       || event.location,
+  ticketsEnabled:      req.body.ticketsEnabled === 'true' || req.body.ticketsEnabled === true,
+  capacity:            parseInt(req.body.capacity) || 0,
+  ecocashNumber:       sanitize(req.body.ecocashNumber       || ''),
+  ecocashName:         sanitize(req.body.ecocashName         || ''),
+  upiId:               sanitize(req.body.upiId               || ''),
+  upiName:             sanitize(req.body.upiName             || ''),
+  paymentInstructions: sanitize(req.body.paymentInstructions || ''),
+}
   const updated = await Event.findByIdAndUpdate(req.params.id, updates, { new: true })
-
   res.json(updated)
 })
-
 // DELETE — also removes images from Cloudinary
 export const deleteEvent = asyncHandler(async (req, res) => {
   const event = await Event.findById(req.params.id)
