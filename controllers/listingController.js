@@ -1,12 +1,10 @@
 import Listing from "../models/Listing.js"
 import asyncHandler from "../middleware/asyncHandler.js"
 import { v2 as cloudinary } from "cloudinary"
-
 const sanitize = (str) => {
   if (typeof str !== 'string') return str
   return str.replace(/<[^>]*>/g, '').trim()
 }
-
 const deleteFromCloudinary = async (images) => {
   if (!images || images.length === 0) return
   for (const imageUrl of images) {
@@ -22,7 +20,6 @@ const deleteFromCloudinary = async (images) => {
     }
   }
 }
-
 // CREATE
 export const createListing = asyncHandler(async (req, res) => {
   const imagePaths = req.files?.map(file => file.path) || []
@@ -32,7 +29,6 @@ export const createListing = asyncHandler(async (req, res) => {
     res.status(400)
     throw new Error("Title, price and phone are required")
   }
-
   const listing = await Listing.create({
     ...req.body,
     title: sanitize(title),
@@ -44,7 +40,6 @@ export const createListing = asyncHandler(async (req, res) => {
   })
   res.status(201).json(listing)
 })
-
 // GET ALL
 export const getListings = asyncHandler(async (req, res) => {
   const { city, search, category } = req.query
@@ -52,12 +47,15 @@ export const getListings = asyncHandler(async (req, res) => {
   if (city) filter["location.city"] = city
   if (search) filter.$text = { $search: search }
   if (category && category !== 'All') filter.category = category
+  if (req.query.condition && req.query.condition !== 'All') {
+     filter.condition = req.query.condition
+   }
+  
   const listings = await Listing.find(filter)
     .sort({ createdAt: -1 })
     .populate("user", "name phone isVerified")
   res.json(listings)
 })
-
 // GET ONE
 export const getListingById = asyncHandler(async (req, res) => {
   const listing = await Listing.findById(req.params.id).populate("user")
@@ -67,7 +65,6 @@ export const getListingById = asyncHandler(async (req, res) => {
   }
   res.json(listing)
 })
-
 // UPDATE
 export const updateListing = asyncHandler(async (req, res) => {
   const listing = await Listing.findById(req.params.id)
@@ -84,7 +81,6 @@ export const updateListing = asyncHandler(async (req, res) => {
   )
   res.json(updated)
 })
-
 // DELETE — also removes images from Cloudinary
 export const deleteListing = asyncHandler(async (req, res) => {
   const listing = await Listing.findById(req.params.id)

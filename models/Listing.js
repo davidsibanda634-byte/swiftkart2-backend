@@ -26,6 +26,11 @@ const listingSchema = new mongoose.Schema(
       city: { type: String, required: true },
       area: { type: String },
     },
+    condition: {
+       type:    String,
+       enum:    ['New', 'Used'],
+       default: 'Used',
+    },
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
