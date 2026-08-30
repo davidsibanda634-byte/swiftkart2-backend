@@ -2,6 +2,14 @@ import User from "../models/User.js"
 import bcrypt from "bcryptjs"
 import generateToken from "../utils/generateToken.js"
 import asyncHandler from "../middleware/asyncHandler.js"
+import crypto from "crypto"
+
+// Generate a unique referral code e.g. "DAVID-A3X9K"
+const generateReferralCode = (name) => {
+  const prefix = name.replace(/\s+/g, '').toUpperCase().slice(0, 5)
+  const suffix = crypto.randomBytes(3).toString('hex').toUpperCase()
+  return prefix + '-' + suffix
+}
 
 // ── Input sanitizer — strips HTML/script tags ──
 const sanitize = (str) => {
@@ -71,24 +79,49 @@ export const registerUser = asyncHandler(async (req, res) => {
 
   const hashedPassword = await bcrypt.hash(password, 10)
 
-  const user = await User.create({
-    name: cleanName,
-    email: cleanEmail,
-    password: hashedPassword,
-    phone: cleanPhone,
-    location: cleanLocation,
-  })
+// Generate unique referral code for this new user
+let referralCode
+let codeExists = true
+while (codeExists) {
+  referralCode = generateReferralCode(cleanName)
+  const existing = await User.findOne({ referralCode })
+  if (!existing) codeExists = false
+}
+
+// Find referrer if a referral code was passed
+let referredBy = null
+const { refCode } = req.body
+if (refCode) {
+  const referrer = await User.findOne({ referralCode: refCode })
+  if (referrer) {
+    referredBy = referrer._id
+    // Award 10 points to the referrer
+    await User.findByIdAndUpdate(referrer._id, { $inc: { points: 10 } })
+  }
+}
+
+const user = await User.create({
+  name:         cleanName,
+  email:        cleanEmail,
+  password:     hashedPassword,
+  phone:        cleanPhone,
+  location:     cleanLocation,
+  referralCode,
+  referredBy,
+})
 
   res.status(201).json({
-    _id: user._id,
-    name: user.name,
-    email: user.email,
-    phone: user.phone,
-    location: user.location,
-    isAdmin: user.isAdmin,
-    isBanned: user.isBanned,
-    token: generateToken(user._id),
-  })
+  _id:          user._id,
+  name:         user.name,
+  email:        user.email,
+  phone:        user.phone,
+  location:     user.location,
+  isAdmin:      user.isAdmin,
+  isBanned:     user.isBanned,
+  referralCode: user.referralCode,
+  points:       user.points,
+  token:        generateToken(user._id),
+})
 })
 
 // LOGIN
@@ -125,15 +158,17 @@ export const loginUser = asyncHandler(async (req, res) => {
     }
 
     res.json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      location: user.location,
-      isAdmin: user.isAdmin,
-      isBanned: user.isBanned,
-      token: generateToken(user._id),
-    })
+  _id:          user._id,
+  name:         user.name,
+  email:        user.email,
+  phone:        user.phone,
+  location:     user.location,
+  isAdmin:      user.isAdmin,
+  isBanned:     user.isBanned,
+  referralCode: user.referralCode,
+  points:       user.points,
+  token:        generateToken(user._id),
+})
   } else {
     res.status(401)
     throw new Error("Invalid email or password")

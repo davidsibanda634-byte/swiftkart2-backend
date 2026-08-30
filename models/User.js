@@ -43,6 +43,24 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    referralCode: {
+  type:   String,
+  unique: true,
+  sparse: true,
+  // e.g. "DAVID123" — generated on register
+},
+
+referredBy: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref:  'User',
+  // the user who referred this person
+},
+
+points: {
+  type:    Number,
+  default: 0,
+  // earned by referring new users — 10 points per referral
+},
   },
   { timestamps: true }
 )
