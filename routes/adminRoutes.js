@@ -2,6 +2,7 @@ import express from "express"
 import {
   getStats,
   getAllUsers,
+  getReferrals,
   toggleBanUser,
   toggleAdmin,
   toggleVerifyUser,
@@ -70,5 +71,6 @@ router.delete("/advertisements/:id",   protect, admin, deleteAdvertisement)
 
 // Audit logs — read only, no delete route by design
 router.get("/logs",                    protect, admin, getAllLogsAdmin)
-
+// Referral system
+router.get("/referrals", protect, admin, getReferrals)
 export default router

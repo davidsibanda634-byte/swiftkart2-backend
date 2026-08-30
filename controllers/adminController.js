@@ -348,3 +348,26 @@ export const getAllLogsAdmin = asyncHandler(async (req, res) => {
     .limit(500)
   res.json(logs)
 })
+// GET all users with referral data
+export const getReferrals = asyncHandler(async (req, res) => {
+  const users = await User.find({})
+    .select('name email referralCode points referredBy createdAt')
+    .populate('referredBy', 'name email')
+    .sort({ points: -1 })
+
+  const data = await Promise.all(users.map(async (u) => {
+    const referralCount = await User.countDocuments({ referredBy: u._id })
+    return {
+      _id:           u._id,
+      name:          u.name,
+      email:         u.email,
+      referralCode:  u.referralCode,
+      points:        u.points || 0,
+      referralCount,
+      referredBy:    u.referredBy,
+      joinedAt:      u.createdAt,
+    }
+  }))
+
+  res.json(data)
+})
